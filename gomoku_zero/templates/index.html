@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GomokuZero - 五子棋AI训练系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 GomokuZero</h1>
+            <p class="subtitle">AlphaGo Zero 风格五子棋自对弈训练系统</p>
+        </header>
+        
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="game">🎮 对弈</button>
+            <button class="tab-btn" data-tab="training">⚙️ 训练</button>
+            <button class="tab-btn" data-tab="data">📊 数据</button>
+        </nav>
+        
+        <main>
+            <!-- 对弈页面 -->
+            <section id="game-section" class="tab-content active">
+                <div class="game-controls">
+                    <div class="control-group">
+                        <label for="board-size">棋盘尺寸:</label>
+                        <select id="board-size">
+                            <option value="9">9×9</option>
+                            <option value="11">11×11</option>
+                            <option value="13">13×13</option>
+                            <option value="15" selected>15×15</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="player-color">执棋:</label>
+                        <select id="player-color">
+                            <option value="black">黑棋（先手）</option>
+                            <option value="white">白棋（后手）</option>
+                        </select>
+                    </div>
+                    <button id="start-game-btn" class="btn btn-primary">开始对弈</button>
+                </div>
+                
+                <div class="game-area">
+                    <div class="board-container">
+                        <canvas id="game-board"></canvas>
+                        <div id="game-info" class="game-info">
+                            <div id="status-message">点击"开始对弈"开始游戏</div>
+                            <div id="win-rate" class="win-rate"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="game-actions" class="game-actions hidden">
+                    <button id="new-game-btn" class="btn btn-secondary">新游戏</button>
+                </div>
+            </section>
+            
+            <!-- 训练页面 -->
+            <section id="training-section" class="tab-content">
+                <div class="training-controls">
+                    <div class="control-group">
+                        <label for="train-board-size">棋盘尺寸:</label>
+                        <select id="train-board-size">
+                            <option value="9" selected>9×9 (推荐入门)</option>
+                            <option value="11">11×11</option>
+                            <option value="13">13×13</option>
+                            <option value="15">15×15</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="games-per-iter">每轮自对弈局数:</label>
+                        <input type="number" id="games-per-iter" value="100" min="10" max="500">
+                    </div>
+                    <div class="control-group">
+                        <label for="mcts-sim">MCTS模拟次数:</label>
+                        <input type="number" id="mcts-sim" value="200" min="50" max="1000">
+                    </div>
+                    <div class="control-group">
+                        <label for="train-epochs">训练轮数:</label>
+                        <input type="number" id="train-epochs" value="10" min="1" max="100">
+                    </div>
+                </div>
+                
+                <div class="training-actions">
+                    <button id="start-training-btn" class="btn btn-primary">开始训练</button>
+                    <button id="stop-training-btn" class="btn btn-danger hidden">停止训练</button>
+                </div>
+                
+                <div id="training-status" class="training-status hidden">
+                    <h3>训练进度</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">迭代次数</span>
+                            <span id="stat-iteration" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">完成局数</span>
+                            <span id="stat-games" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">当前损失</span>
+                            <span id="stat-loss" class="stat-value">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 数据页面 -->
+            <section id="data-section" class="tab-content">
+                <h2>📦 已训练模型</h2>
+                <div id="model-list" class="model-list">
+                    <p class="loading">加载中...</p>
+                </div>
+                
+                <h2>📈 训练统计</h2>
+                <div id="training-stats" class="training-stats">
+                    <div class="stat-card">
+                        <h4>总训练局数</h4>
+                        <p id="total-games">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>训练迭代</h4>
+                        <p id="total-iterations">-</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <div id="notification" class="notification hidden"></div>
+    
+    <script src="/static/js/board.js"></script>
+    <script src="/static/js/game.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
