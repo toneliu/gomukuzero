@@ -1,8 +1,10 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 from typing import Dict, Tuple, Optional
 from .board import Board
 from app.config import CONFIG
+
 
 class Node:
     def __init__(self, prior: float, parent=None, move: Optional[Tuple[int, int]] = None):
@@ -27,6 +29,7 @@ class Node:
         exploration = c_puct * self.prior * np.sqrt(parent_visits) / (1 + self.visit_count)
         return exploitation + exploration
 
+
 class MCTS:
     def __init__(self, board: Board, network, simulations: int = None):
         self.board = board
@@ -35,13 +38,83 @@ class MCTS:
         self.c_puct = CONFIG.C_PUCT
         self.root = Node(prior=1.0, parent=None, move=None)
         self.root.board_state = board.copy()
+        
+        self.device = next(network.parameters()).device
+        self.board_size = board.size
+        self.num_actions = board.size * board.size
+        
+        self.gpu_batch_size = 64
+        self._init_gpu_buffers()
+    
+    def _init_gpu_buffers(self):
+        max_buffer_size = max(self.gpu_batch_size, self.simulations)
+        self.state_buffer = torch.zeros(
+            max_buffer_size, CONFIG.HISTORY_LEN * 2 + 1, 
+            self.board_size, self.board_size, 
+            device=self.device, dtype=torch.float32
+        )
+        self.policy_buffer = torch.zeros(
+            max_buffer_size, self.num_actions,
+            device=self.device, dtype=torch.float32
+        )
+        self.value_buffer = torch.zeros(
+            max_buffer_size,
+            device=self.device, dtype=torch.float32
+        )
+        self.policy_workspace = torch.zeros(
+            self.gpu_batch_size, self.num_actions,
+            device=self.device, dtype=torch.float32
+        )
+    
+    def _get_state(self, board: Board) -> torch.Tensor:
+        state = board.get_state(CONFIG.HISTORY_LEN)
+        return torch.from_numpy(state).float()
     
     def search(self) -> float:
-        for _ in range(self.simulations):
-            node = self._select(self.root)
-            value = self._expand_and_evaluate(node)
-            self._backup(node, value)
+        batch_size = self.gpu_batch_size
+        num_full_batches = self.simulations // batch_size
+        remainder = self.simulations % batch_size
+        
+        for _ in range(num_full_batches):
+            self._gpu_batch_search(batch_size)
+        
+        if remainder > 0:
+            self._gpu_batch_search(remainder)
+        
         return self.root.get_value()
+    
+    def _gpu_batch_search(self, batch_size: int):
+        nodes_batch = []
+        states_batch = []
+        boards_batch = []
+        
+        for _ in range(batch_size):
+            node = self._select(self.root)
+            board = node.board_state if node.board_state else self.board
+            nodes_batch.append(node)
+            boards_batch.append(board)
+            states_batch.append(self._get_state(board))
+        
+        for i, state in enumerate(states_batch):
+            self.state_buffer[i] = state
+        
+        with torch.no_grad():
+            policy_logits, values = self.network(self.state_buffer[:batch_size])
+        
+        policies = F.softmax(policy_logits, dim=1)
+        self.policy_workspace[:batch_size] = policies
+        
+        for i, (node, board) in enumerate(zip(nodes_batch, boards_batch)):
+            value = values[i].cpu().item()
+            
+            if board.is_game_over():
+                winner = board.get_winner()
+                value = float(winner) if winner else 0.0
+            
+            self._expand_node(node, self.policy_workspace[i], value, board)
+        
+        for i, node in enumerate(nodes_batch):
+            self._backup(node, values[i].cpu().item())
     
     def _select(self, node: Node) -> Node:
         while node.is_expanded:
@@ -74,29 +147,17 @@ class MCTS:
         
         return node
     
-    def _expand_and_evaluate(self, node: Node) -> float:
-        board = node.board_state if node.board_state else self.board
-        
-        if board.is_game_over():
-            winner = board.get_winner()
-            return float(winner) if winner else 0.0
-        
-        state = self._get_state(board)
-        
-        with torch.no_grad():
-            policy_logits, value = self.network(state)
-        
-        policy = torch.softmax(policy_logits, dim=1).squeeze(0).cpu().numpy()
-        value = value.cpu().item()
-        
+    def _expand_node(self, node: Node, policy: torch.Tensor, value: float, board: Board):
         valid_moves = board.get_valid_moves()
         move_indices = [r * board.size + c for r, c in valid_moves]
+        
+        policy_np = policy.cpu().numpy()
         
         if node == self.root and len(node.children) == 0:
             noise = np.random.dirichlet([CONFIG.DIRICHLET_ALPHA] * len(valid_moves))
             for i, move in enumerate(valid_moves):
                 node.children[move] = Node(
-                    prior=0.75 * policy[move_indices[i]] + 0.25 * noise[i],
+                    prior=0.75 * policy_np[move_indices[i]] + 0.25 * noise[i],
                     parent=node,
                     move=move
                 )
@@ -104,13 +165,12 @@ class MCTS:
             for i, move in enumerate(valid_moves):
                 if move not in node.children:
                     node.children[move] = Node(
-                        prior=policy[move_indices[i]],
+                        prior=policy_np[move_indices[i]],
                         parent=node,
                         move=move
                     )
         
         node.is_expanded = True
-        return value
     
     def _backup(self, node: Node, value: float):
         current = node
@@ -120,30 +180,29 @@ class MCTS:
             value = -value
             current = current.parent
     
-    def _get_state(self, board: Board) -> torch.Tensor:
-        state = board.get_state(CONFIG.HISTORY_LEN)
-        state = torch.from_numpy(state).unsqueeze(0).float()
-        if next(self.network.parameters()).is_cuda:
-            state = state.cuda()
-        return state
-    
-    def get_policy(self, temperature: float = 1.0) -> np.ndarray:
-        counts = np.zeros(self.board.size * self.board.size)
+    def get_policy(self, temperature: float = 1.0) -> torch.Tensor:
+        counts = np.zeros(self.num_actions)
         
         for move, child in self.root.children.items():
-            idx = move[0] * self.board.size + move[1]
+            idx = move[0] * self.board_size + move[1]
             counts[idx] = child.visit_count
         
-        if temperature == 0:
-            best_idx = np.argmax(counts)
-            counts = np.zeros_like(counts)
-            counts[best_idx] = 1.0
-        else:
-            counts = counts ** (1.0 / temperature)
-            if counts.sum() > 0:
-                counts = counts / counts.sum()
+        counts_tensor = torch.from_numpy(counts).float().to(self.device)
         
-        return counts
+        if temperature == 0:
+            best_idx = torch.argmax(counts_tensor)
+            counts_tensor = torch.zeros_like(counts_tensor)
+            counts_tensor[best_idx] = 1.0
+        else:
+            counts_tensor = counts_tensor ** (1.0 / temperature)
+            if counts_tensor.sum() > 0:
+                counts_tensor = counts_tensor / counts_tensor.sum()
+        
+        return counts_tensor
+    
+    def get_policy_numpy(self, temperature: float = 1.0) -> np.ndarray:
+        policy = self.get_policy(temperature)
+        return policy.cpu().numpy()
     
     def get_best_move(self) -> Tuple[int, int]:
         if not self.root.children:
@@ -161,13 +220,3 @@ class MCTS:
                 best_move = move
         
         return best_move
-    
-    def update_root(self, move: Tuple[int, int]):
-        if move in self.root.children:
-            new_root = self.root.children[move]
-            new_root.parent = None
-            new_root.board_state = self.board.copy()
-            self.root = new_root
-        else:
-            self.root = Node(prior=1.0, parent=None, move=None)
-            self.root.board_state = self.board.copy()
