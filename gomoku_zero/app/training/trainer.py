@@ -51,7 +51,7 @@ class Trainer:
         
         self.optimizer.step()
         
-        return total_loss.item()
+        return total_loss.cpu().item()
     
     def eval_step(self, states: torch.Tensor, target_policies: torch.Tensor,
                   target_values: torch.Tensor) -> dict:
@@ -71,9 +71,9 @@ class Trainer:
             )
         
         return {
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'policy_accuracy': policy_acc.item()
+            'policy_loss': policy_loss.cpu().item(),
+            'value_loss': value_loss.cpu().item(),
+            'policy_accuracy': policy_acc.cpu().item()
         }
     
     def train_on_batch(self, states: np.ndarray, policies: np.ndarray, 

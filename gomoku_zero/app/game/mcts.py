@@ -86,8 +86,8 @@ class MCTS:
         with torch.no_grad():
             policy_logits, value = self.network(state)
         
-        policy = torch.softmax(policy_logits, dim=1).squeeze(0).numpy()
-        value = value.item()
+        policy = torch.softmax(policy_logits, dim=1).squeeze(0).cpu().numpy()
+        value = value.cpu().item()
         
         valid_moves = board.get_valid_moves()
         move_indices = [r * board.size + c for r, c in valid_moves]
@@ -123,6 +123,8 @@ class MCTS:
     def _get_state(self, board: Board) -> torch.Tensor:
         state = board.get_state(CONFIG.HISTORY_LEN)
         state = torch.from_numpy(state).unsqueeze(0).float()
+        if next(self.network.parameters()).is_cuda:
+            state = state.cuda()
         return state
     
     def get_policy(self, temperature: float = 1.0) -> np.ndarray:
