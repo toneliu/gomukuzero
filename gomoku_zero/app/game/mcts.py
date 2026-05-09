@@ -203,6 +203,41 @@ class MCTS:
         policy = self.get_policy(temperature)
         return policy.cpu().numpy()
     
+    def update_root(self, move: Tuple[int, int]):
+        """更新根节点为指定子节点，并释放旧树"""
+        if move not in self.root.children:
+            return
+        
+        new_root = self.root.children[move]
+        new_root.parent = None
+        new_root.board_state = None
+        
+        self._release_subtree(self.root)
+        
+        self.root = new_root
+        
+        self.board.place_stone(*move)
+        self.root.board_state = self.board.copy()
+    
+    def _release_subtree(self, node: Node):
+        """递归释放子树的引用，防止内存泄漏"""
+        for child in node.children.values():
+            self._release_subtree(child)
+        node.children.clear()
+        node.board_state = None
+        node.parent = None
+    
+    def cleanup(self):
+        """清理所有资源"""
+        self._release_subtree(self.root)
+        self.root = Node(prior=1.0, parent=None, move=None)
+        self.root.board_state = self.board.copy()
+        
+        if hasattr(self, 'state_buffer') and self.state_buffer is not None:
+            del self.state_buffer
+        if hasattr(self, 'policy_workspace') and self.policy_workspace is not None:
+            del self.policy_workspace
+    
     def get_best_move(self) -> Tuple[int, int]:
         if not self.root.children:
             valid_moves = self.board.get_valid_moves()

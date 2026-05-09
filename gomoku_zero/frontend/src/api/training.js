@@ -1,20 +1,24 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/training',
   timeout: 60000
 })
 
 export const trainingAPI = {
   startTraining(config) {
-    return api.post('/training/start', config)
+    return api.post('/start', config)
   },
 
   stopTraining() {
-    return api.post('/training/stop')
+    return api.post('/stop')
   },
 
   getTrainingStatus() {
-    return api.get('/training/status')
+    return api.get('/status')
+  },
+
+  getDevices() {
+    return api.get('/devices')
   }
 }

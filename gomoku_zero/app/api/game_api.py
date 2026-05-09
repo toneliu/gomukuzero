@@ -124,6 +124,9 @@ async def make_move(request: MoveRequest):
     
     if board.is_game_over():
         winner = board.get_winner()
+        if game['mcts']:
+            game['mcts'].cleanup()
+            game['mcts'] = None
         await save_game_to_history(request.game_id, winner)
         return MoveResponse(
             valid=True,
@@ -131,15 +134,18 @@ async def make_move(request: MoveRequest):
             winner=winner
         )
     
+    if game['mcts']:
+        game['mcts'].cleanup()
+    
     mcts = MCTS(board, game['network'], simulations=CONFIG.MCTS_SIMULATIONS)
     mcts.search()
     ai_move = mcts.get_best_move()
+    mcts.cleanup()
     
     if ai_move:
         board.place_stone(*ai_move)
         ai_move_record = {'player': 'ai', 'position': list(ai_move), 'turn': len(game['moves']) + 1}
         game['moves'].append(ai_move_record)
-        game['mcts'] = mcts
     
     if board.is_game_over():
         winner = board.get_winner()
@@ -189,14 +195,17 @@ async def get_game_state(game_id: str):
     board = game['board']
     
     ai_probs = None
-    if game['mcts']:
+    last_move = None
+    if game['mcts'] is not None:
         ai_probs = game['mcts'].get_policy_numpy().tolist()
+        if game['mcts'].root:
+            last_move = game['mcts'].root.move if game['mcts'].root.move else None
     
     return GameStateResponse(
         game_id=game_id,
         board=board.board.tolist(),
         current_player="black" if board.current_player == Board.BLACK else "white",
-        last_move=game['mcts'].root.move if game['mcts'] and game['mcts'].root.move else None,
+        last_move=list(last_move) if last_move else None,
         ai_probabilities=ai_probs
     )
 

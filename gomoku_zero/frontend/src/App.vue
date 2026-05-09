@@ -204,10 +204,6 @@ const handleReplay = (game) => {
 
 <style scoped>
 .tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
+  padding: 20px 0;
 }
 </style>
