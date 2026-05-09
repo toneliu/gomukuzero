@@ -134,6 +134,7 @@ async def start_training(request: StartTrainingRequest):
     training_state['thread'].start()
     
     return {
+        "success": True,
         "message": "训练已开始", 
         "board_size": request.board_size,
         "device": request.device

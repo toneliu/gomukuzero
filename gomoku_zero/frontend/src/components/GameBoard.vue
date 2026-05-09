@@ -3,6 +3,7 @@
     <canvas
       ref="canvas"
       @click="handleClick"
+      @touchend.prevent="handleTouchEnd"
     ></canvas>
   </div>
 </template>
@@ -33,16 +34,33 @@ const props = defineProps({
 const emit = defineEmits(['click-cell'])
 
 const canvas = ref(null)
-const { resize, drawBoard, getCellFromEvent } = useBoard()
+const { resize, drawBoard, getCellFromEvent, getCellFromPoint } = useBoard()
 
 let resizeObserver = null
+let lastTouchTime = 0
 
 const handleClick = (event) => {
   if (!canvas.value) return
 
-  const cell = getCellFromEvent(canvas.value, event, props.boardSize)
+  const cell = getCellFromEvent(event, props.boardSize)
   if (cell) {
     emit('click-cell', cell[0], cell[1])
+  }
+}
+
+const handleTouchEnd = (event) => {
+  if (!canvas.value) return
+
+  const now = Date.now()
+  if (now - lastTouchTime < 300) return
+  lastTouchTime = now
+
+  if (event.changedTouches && event.changedTouches.length > 0) {
+    const touch = event.changedTouches[0]
+    const cell = getCellFromPoint(touch.clientX, touch.clientY, props.boardSize)
+    if (cell) {
+      emit('click-cell', cell[0], cell[1])
+    }
   }
 }
 
@@ -103,7 +121,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   max-width: 700px;
-  min-height: 700px;
+  min-height: 500px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -116,16 +134,20 @@ canvas {
   cursor: pointer;
   width: 100%;
   max-width: 700px;
-  min-width: 400px;
+  min-width: 300px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 @media (max-width: 768px) {
   .board-container {
-    min-height: 500px;
+    min-height: 400px;
   }
 
   canvas {
     min-width: 95vw;
+    max-width: 95vw;
   }
 }
 </style>
