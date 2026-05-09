@@ -59,7 +59,7 @@ const redraw = () => {
 }
 
 watch(
-  () => [props.board, props.lastMove, props.policyMap],
+  () => [props.board, props.boardSize, props.lastMove, props.policyMap],
   () => {
     redraw()
   },
