@@ -8,7 +8,6 @@ from app.models.model_manager import ModelManager
 from app.config import CONFIG
 import uuid
 import json
-import os
 from pathlib import Path
 
 router = APIRouter()
@@ -22,6 +21,7 @@ history_dir.mkdir(exist_ok=True)
 class StartGameRequest(BaseModel):
     board_size: int = 9
     player_color: str = "black"
+    model_size: Optional[int] = None
 
 class StartGameResponse(BaseModel):
     game_id: str
@@ -64,7 +64,9 @@ async def start_game(request: StartGameRequest):
     if request.board_size not in CONFIG.BOARD_SIZES:
         raise HTTPException(status_code=400, detail="不支持的棋盘尺寸")
     
-    network = model_manager.load_model(request.board_size)
+    model_size = request.model_size if request.model_size else request.board_size
+    
+    network = model_manager.load_model(model_size)
     if network is None:
         network = model_manager.create_new_model(request.board_size)
     

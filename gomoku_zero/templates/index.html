@@ -23,6 +23,13 @@
         <main>
             <!-- 对弈页面 -->
             <section id="game-section" class="tab-content active">
+                <div class="model-select">
+                    <label for="model-to-use">选择AI模型:</label>
+                    <select id="model-to-use">
+                        <option value="">加载中...</option>
+                    </select>
+                </div>
+                
                 <div class="game-controls">
                     <div class="control-group">
                         <label for="board-size">棋盘尺寸:</label>
@@ -46,10 +53,10 @@
                 <div class="game-area">
                     <div class="board-container">
                         <canvas id="game-board"></canvas>
-                        <div id="game-info" class="game-info">
-                            <div id="status-message">点击"开始对弈"开始游戏</div>
-                            <div id="win-rate" class="win-rate"></div>
-                        </div>
+                    </div>
+                    <div id="game-info" class="game-info">
+                        <div id="status-message" class="status-message">点击"开始对弈"开始游戏</div>
+                        <div id="win-rate" class="win-rate"></div>
                     </div>
                 </div>
                 

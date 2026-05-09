@@ -8,6 +8,7 @@ let game;
 let pollInterval;
 let currentReplay = null;
 let replayStep = 0;
+let availableModels = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -52,6 +53,7 @@ function initTabs() {
             if (tabId === 'game') {
                 const container = document.querySelector('.board-container');
                 boardRenderer.resize(container.clientWidth - 40);
+                loadModelOptions();
             } else if (tabId === 'data') {
                 loadGameHistory();
             }
@@ -67,9 +69,35 @@ function initGameControls() {
     newGameBtn.addEventListener('click', startNewGame);
 }
 
+async function loadModelOptions() {
+    try {
+        const response = await fetch('/api/data/models');
+        const data = await response.json();
+        
+        const modelSelect = document.getElementById('model-to-use');
+        availableModels = data.models || [];
+        
+        if (availableModels.length === 0) {
+            modelSelect.innerHTML = '<option value="">无已训练模型（将使用随机模型）</option>';
+            return;
+        }
+        
+        let options = '<option value="">默认最佳模型</option>';
+        availableModels.forEach(model => {
+            options += `<option value="${model.board_size}">${model.board_size}×${model.board_size} 最佳模型</option>`;
+        });
+        
+        modelSelect.innerHTML = options;
+    } catch (error) {
+        console.error('Load model options error:', error);
+        document.getElementById('model-to-use').innerHTML = '<option value="">加载失败</option>';
+    }
+}
+
 async function startNewGame() {
     const boardSize = parseInt(document.getElementById('board-size').value);
     const playerColor = document.getElementById('player-color').value;
+    const modelSize = document.getElementById('model-to-use').value;
     
     game = new GomokuGame();
     boardRenderer.setSize(boardSize);
@@ -77,12 +105,15 @@ async function startNewGame() {
     const container = document.querySelector('.board-container');
     boardRenderer.resize(container.clientWidth - 40);
     
-    const result = await game.startGame(boardSize, playerColor);
+    const result = await game.startGame(boardSize, playerColor, modelSize);
     
     if (result.success) {
         document.getElementById('status-message').textContent = '游戏开始！';
         document.getElementById('game-actions').classList.remove('hidden');
         boardRenderer.clearPolicyMap();
+        
+        const emptyBoard = Array(boardSize).fill().map(() => Array(boardSize).fill(0));
+        boardRenderer.setBoard(emptyBoard);
         
         updateGameState();
     } else {
@@ -113,6 +144,8 @@ async function handleBoardClick(event) {
             game.isMyTurn = false;
             handleGameOver(result.data.winner);
         }
+    } else {
+        showNotification('落子失败，请重试');
     }
 }
 
@@ -135,12 +168,12 @@ async function updateGameState() {
     
     const statusMsg = document.getElementById('status-message');
     if (state.current_player === game.playerColor) {
-        statusMsg.textContent = '轮到你了';
+        statusMsg.textContent = '轮到你了 - 请点击棋盘落子';
         game.isMyTurn = true;
     } else {
         statusMsg.textContent = 'AI思考中...';
         game.isMyTurn = false;
-        setTimeout(updateGameState, 500);
+        setTimeout(updateGameState, 1000);
     }
 }
 
@@ -261,6 +294,7 @@ async function initDataView() {
     await loadModelList();
     await loadTrainingStats();
     await loadGameHistory();
+    await loadModelOptions();
 }
 
 async function loadModelList() {
