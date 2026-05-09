@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GomokuZero - 五子棋AI训练系统</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/history.css">
 </head>
 <body>
     <div class="container">
@@ -54,12 +55,20 @@
                 
                 <div id="game-actions" class="game-actions hidden">
                     <button id="new-game-btn" class="btn btn-secondary">新游戏</button>
+                    <button id="save-game-btn" class="btn btn-secondary">保存对局</button>
                 </div>
             </section>
             
             <!-- 训练页面 -->
             <section id="training-section" class="tab-content">
                 <div class="training-controls">
+                    <div class="control-group">
+                        <label for="train-device">训练设备:</label>
+                        <select id="train-device">
+                            <option value="cpu" selected>CPU (通用)</option>
+                            <option value="cuda">GPU (需要CUDA)</option>
+                        </select>
+                    </div>
                     <div class="control-group">
                         <label for="train-board-size">棋盘尺寸:</label>
                         <select id="train-board-size">
@@ -83,6 +92,10 @@
                     </div>
                 </div>
                 
+                <div id="device-info" class="device-info" style="background: #e3f2fd; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                    <span id="device-status">检测中...</span>
+                </div>
+                
                 <div class="training-actions">
                     <button id="start-training-btn" class="btn btn-primary">开始训练</button>
                     <button id="stop-training-btn" class="btn btn-danger hidden">停止训练</button>
@@ -91,6 +104,10 @@
                 <div id="training-status" class="training-status hidden">
                     <h3>训练进度</h3>
                     <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">当前设备</span>
+                            <span id="stat-device" class="stat-value">-</span>
+                        </div>
                         <div class="stat-item">
                             <span class="stat-label">迭代次数</span>
                             <span id="stat-iteration" class="stat-value">0</span>
@@ -112,6 +129,27 @@
                 <h2>📦 已训练模型</h2>
                 <div id="model-list" class="model-list">
                     <p class="loading">加载中...</p>
+                </div>
+                
+                <h2>📜 对局历史</h2>
+                <button id="refresh-history-btn" class="btn btn-secondary" style="margin-bottom: 15px;">🔄 刷新历史</button>
+                <div id="game-history-list" class="game-history-list">
+                    <p class="loading">加载中...</p>
+                </div>
+                
+                <div id="replay-section" class="replay-section hidden">
+                    <h3>🔁 对局回放</h3>
+                    <div class="replay-controls">
+                        <button id="replay-start" class="btn btn-secondary">⏮ 开始</button>
+                        <button id="replay-prev" class="btn btn-secondary">◀ 上一步</button>
+                        <button id="replay-next" class="btn btn-secondary">▶ 下一步</button>
+                        <button id="replay-end" class="btn btn-secondary">⏭ 结束</button>
+                        <span id="replay-step">0 / 0</span>
+                    </div>
+                    <div class="board-container" style="margin: 20px auto;">
+                        <canvas id="replay-board"></canvas>
+                    </div>
+                    <button id="close-replay-btn" class="btn btn-danger">关闭回放</button>
                 </div>
                 
                 <h2>📈 训练统计</h2>

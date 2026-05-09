@@ -1,0 +1,112 @@
+.game-history-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-card {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #4CAF50;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.history-card:hover {
+    background: #e8f5e9;
+    transform: translateX(5px);
+}
+
+.history-card.winner {
+    border-left-color: #4CAF50;
+}
+
+.history-card.loser {
+    border-left-color: #f44336;
+}
+
+.history-card.draw {
+    border-left-color: #ffa726;
+}
+
+.history-card h4 {
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.history-card .info {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.history-card .winner-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.history-card .winner-badge.win {
+    background: #4CAF50;
+    color: white;
+}
+
+.history-card .winner-badge.lose {
+    background: #f44336;
+    color: white;
+}
+
+.history-card .winner-badge.draw {
+    background: #ffa726;
+    color: white;
+}
+
+.replay-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.replay-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+.replay-controls button {
+    min-width: 80px;
+}
+
+#replay-step {
+    padding: 8px 15px;
+    background: white;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .game-history-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .replay-controls {
+        gap: 8px;
+    }
+    
+    .replay-controls button {
+        min-width: 70px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+}

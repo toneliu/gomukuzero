@@ -18,6 +18,7 @@ model_manager = ModelManager()
 training_state = {
     'running': False,
     'board_size': 9,
+    'device': 'cpu',
     'iteration': 0,
     'games_completed': 0,
     'loss': 0.0,
@@ -32,16 +33,40 @@ class StartTrainingRequest(BaseModel):
     games_per_iteration: int = 100
     mcts_simulations: int = 200
     train_epochs: int = 10
+    device: str = 'cpu'
 
 class TrainingStatusResponse(BaseModel):
     running: bool
     board_size: int
+    device: str
     iteration: int
     games_completed: int
     loss: float
 
 class StopResponse(BaseModel):
     message: str
+
+class DeviceInfoResponse(BaseModel):
+    cuda_available: bool
+    current_device: str
+    device_count: int
+    device_name: str = ""
+
+@router.get("/devices", response_model=DeviceInfoResponse)
+async def get_devices():
+    cuda_available = torch.cuda.is_available()
+    device_count = torch.cuda.device_count() if cuda_available else 0
+    device_name = ""
+    
+    if cuda_available:
+        device_name = torch.cuda.get_device_name(0)
+    
+    return DeviceInfoResponse(
+        cuda_available=cuda_available,
+        current_device='cuda' if cuda_available else 'cpu',
+        device_count=device_count,
+        device_name=device_name
+    )
 
 @router.post("/start")
 async def start_training(request: StartTrainingRequest):
@@ -53,15 +78,25 @@ async def start_training(request: StartTrainingRequest):
     if request.board_size not in CONFIG.BOARD_SIZES:
         raise HTTPException(status_code=400, detail="不支持的棋盘尺寸")
     
+    if request.device not in ['cpu', 'cuda']:
+        raise HTTPException(status_code=400, detail="不支持的设备类型")
+    
+    if request.device == 'cuda' and not torch.cuda.is_available():
+        raise HTTPException(status_code=400, detail="CUDA不可用，请使用CPU训练")
+    
     training_state['running'] = True
     training_state['board_size'] = request.board_size
+    training_state['device'] = request.device
     training_state['iteration'] = 0
     training_state['games_completed'] = 0
     
     def training_loop():
+        device = torch.device(request.device)
         network = model_manager.load_model(request.board_size)
         if network is None:
             network = model_manager.create_new_model(request.board_size)
+        
+        network = network.to(device)
         
         trainer = Trainer(network, request.board_size)
         buffer = DataBuffer(board_size=request.board_size)
@@ -85,9 +120,9 @@ async def start_training(request: StartTrainingRequest):
             
             if buffer.size() >= request.train_epochs * 32:
                 states, policies, values = buffer.sample(batch_size=32)
-                states_tensor = torch.from_numpy(states).float()
-                policies_tensor = torch.from_numpy(policies).float()
-                values_tensor = torch.from_numpy(values).float()
+                states_tensor = torch.from_numpy(states).float().to(device)
+                policies_tensor = torch.from_numpy(policies).float().to(device)
+                values_tensor = torch.from_numpy(values).float().to(device)
                 
                 loss = trainer.train_step(states_tensor, policies_tensor, values_tensor)
                 training_state['loss'] = loss
@@ -98,13 +133,18 @@ async def start_training(request: StartTrainingRequest):
     training_state['thread'] = threading.Thread(target=training_loop)
     training_state['thread'].start()
     
-    return {"message": "训练已开始", "board_size": request.board_size}
+    return {
+        "message": "训练已开始", 
+        "board_size": request.board_size,
+        "device": request.device
+    }
 
 @router.get("/status", response_model=TrainingStatusResponse)
 async def get_training_status():
     return TrainingStatusResponse(
         running=training_state['running'],
         board_size=training_state['board_size'],
+        device=training_state['device'],
         iteration=training_state['iteration'],
         games_completed=training_state['games_completed'],
         loss=training_state['loss']
