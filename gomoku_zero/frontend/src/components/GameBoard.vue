@@ -3,13 +3,14 @@
     <canvas
       ref="canvas"
       @click="handleClick"
+      @touchstart.prevent="handleTouchStart"
       @touchend.prevent="handleTouchEnd"
     ></canvas>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useBoard } from '../composables/useBoard'
 
 const props = defineProps({
@@ -34,17 +35,22 @@ const props = defineProps({
 const emit = defineEmits(['click-cell'])
 
 const canvas = ref(null)
-const { resize, drawBoard, getCellFromEvent, getCellFromPoint } = useBoard()
+const { resize, drawBoard, getCellFromPoint } = useBoard()
 
 let resizeObserver = null
-let lastTouchTime = 0
+let lastTapTime = 0
 
 const handleClick = (event) => {
   if (!canvas.value) return
-
-  const cell = getCellFromEvent(event, props.boardSize)
+  const cell = getCellFromPoint(event.clientX, event.clientY, props.boardSize, canvas.value)
   if (cell) {
     emit('click-cell', cell[0], cell[1])
+  }
+}
+
+const handleTouchStart = (event) => {
+  if (event.touches.length > 0) {
+    event.preventDefault()
   }
 }
 
@@ -52,12 +58,12 @@ const handleTouchEnd = (event) => {
   if (!canvas.value) return
 
   const now = Date.now()
-  if (now - lastTouchTime < 300) return
-  lastTouchTime = now
+  if (now - lastTapTime < 300) return
+  lastTapTime = now
 
   if (event.changedTouches && event.changedTouches.length > 0) {
     const touch = event.changedTouches[0]
-    const cell = getCellFromPoint(touch.clientX, touch.clientY, props.boardSize)
+    const cell = getCellFromPoint(touch.clientX, touch.clientY, props.boardSize, canvas.value)
     if (cell) {
       emit('click-cell', cell[0], cell[1])
     }
@@ -84,7 +90,9 @@ watch(
 
 watch(
   () => props.boardSize,
-  () => redraw()
+  () => {
+    nextTick(() => redraw())
+  }
 )
 
 watch(
@@ -100,7 +108,7 @@ watch(
 
 onMounted(() => {
   if (canvas.value) {
-    redraw()
+    nextTick(() => redraw())
 
     resizeObserver = new ResizeObserver(() => {
       redraw()
@@ -121,7 +129,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   max-width: 700px;
-  min-height: 500px;
+  min-height: 350px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -132,22 +140,16 @@ canvas {
   border: 4px solid #8B4513;
   border-radius: 4px;
   cursor: pointer;
-  width: 100%;
-  max-width: 700px;
-  min-width: 300px;
-  touch-action: manipulation;
+  touch-action: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 @media (max-width: 768px) {
   .board-container {
-    min-height: 400px;
-  }
-
-  canvas {
-    min-width: 95vw;
-    max-width: 95vw;
+    min-height: 300px;
   }
 }
 </style>

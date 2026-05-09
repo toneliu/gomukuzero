@@ -20,17 +20,13 @@ export function useBoard() {
     if (!canvas) return
 
     const container = canvas.parentElement
-    const containerWidth = container.clientWidth || window.innerWidth
-    const containerHeight = container.clientHeight || window.innerHeight
+    const containerWidth = Math.min(container.clientWidth || window.innerWidth, 700)
+    const containerHeight = container.clientHeight || window.innerWidth
 
-    const availableWidth = Math.min(containerWidth - 40, 700)
-    const availableHeight = Math.min(containerHeight - 40, availableWidth)
-    const maxSize = Math.min(availableWidth, availableHeight)
+    const maxSize = Math.min(containerWidth - 16, containerHeight - 16, 700)
 
     canvas.width = maxSize
     canvas.height = maxSize
-    canvas.style.width = maxSize + 'px'
-    canvas.style.height = maxSize + 'px'
 
     cellSize.value = maxSize / (size + 1)
   }
@@ -134,43 +130,19 @@ export function useBoard() {
     ctx.globalAlpha = 1.0
   }
 
-  const getCellFromEvent = (event, size) => {
-    const rect = event.target.getBoundingClientRect()
-    let clientX, clientY
+  const getCellFromPoint = (clientX, clientY, size, canvas) => {
+    if (!canvas) return null
 
-    if (event.touches && event.touches.length > 0) {
-      clientX = event.touches[0].clientX
-      clientY = event.touches[0].clientY
-    } else if (event.changedTouches && event.changedTouches.length > 0) {
-      clientX = event.changedTouches[0].clientX
-      clientY = event.changedTouches[0].clientY
-    } else {
-      clientX = event.clientX
-      clientY = event.clientY
-    }
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
 
-    const x = clientX - rect.left
-    const y = clientY - rect.top
-    const cs = event.target.width / (size + 1)
+    const x = (clientX - rect.left) * scaleX
+    const y = (clientY - rect.top) * scaleY
+    const cs = canvas.width / (size + 1)
 
     const col = Math.round((x - cs / 2) / cs)
     const row = Math.round((y - cs / 2) / cs)
-
-    if (row >= 0 && row < size && col >= 0 && col < size) {
-      return [row, col]
-    }
-
-    return null
-  }
-
-  const getCellFromPoint = (canvas, x, y, size) => {
-    const rect = canvas.getBoundingClientRect()
-    const offsetX = x - rect.left
-    const offsetY = y - rect.top
-    const cs = canvas.width / (size + 1)
-
-    const col = Math.round((offsetX - cs / 2) / cs)
-    const row = Math.round((offsetY - cs / 2) / cs)
 
     if (row >= 0 && row < size && col >= 0 && col < size) {
       return [row, col]
@@ -194,7 +166,6 @@ export function useBoard() {
     policyMap,
     resize,
     drawBoard,
-    getCellFromEvent,
     getCellFromPoint,
     clearBoard
   }
