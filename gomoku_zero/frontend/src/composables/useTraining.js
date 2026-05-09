@@ -63,11 +63,11 @@ export function useTraining() {
         const data = response.data
 
         progress.iteration = data.iteration || 0
-        progress.games = data.games || 0
+        progress.games = data.games_completed || 0
         progress.loss = data.loss || 0
-        progress.device = data.device || 'CPU'
+        progress.device = data.device?.toUpperCase() || 'CPU'
 
-        if (data.status === 'idle') {
+        if (!data.running) {
           isTraining.value = false
           status.value = '训练完成'
           stopPolling()

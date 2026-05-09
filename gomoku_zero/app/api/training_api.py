@@ -32,7 +32,7 @@ class StartTrainingRequest(BaseModel):
     board_size: int = 9
     games_per_iteration: int = 100
     mcts_simulations: int = 200
-    train_epochs: int = 10
+    epochs: int = 10
     device: str = 'cpu'
 
 class TrainingStatusResponse(BaseModel):
@@ -118,7 +118,7 @@ async def start_training(request: StartTrainingRequest):
                 buffer.add_game(game)
                 training_state['games_completed'] += 1
             
-            if buffer.size() >= request.train_epochs * 32:
+            if buffer.size() >= request.epochs * 32:
                 states, policies, values = buffer.sample(batch_size=32)
                 states_tensor = torch.from_numpy(states).float().to(device)
                 policies_tensor = torch.from_numpy(policies).float().to(device)

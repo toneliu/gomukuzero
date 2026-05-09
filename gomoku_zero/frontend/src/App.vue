@@ -115,14 +115,19 @@ const {
   status: trainingStatus,
   progress: trainingProgress,
   startTraining,
-  stopTraining
+  stopTraining,
+  device: trainingDeviceFromHook,
+  boardSize: trainingBoardSizeFromHook,
+  gamesPerIteration: trainingGamesFromHook,
+  mctsSimulations: trainingMctsFromHook,
+  epochs: trainingEpochsFromHook
 } = useTraining()
 
-const trainingDevice = ref('cpu')
-const trainingBoardSize = ref(9)
-const gamesPerIteration = ref(100)
-const mctsSimulations = ref(200)
-const trainingEpochs = ref(10)
+const trainingDevice = trainingDeviceFromHook
+const trainingBoardSize = trainingBoardSizeFromHook
+const gamesPerIteration = trainingGamesFromHook
+const mctsSimulations = trainingMctsFromHook
+const trainingEpochs = trainingEpochsFromHook
 
 const showVictory = ref(false)
 const policyMap = ref([])
