@@ -2,7 +2,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.api import game_api, training_api, data_api
 from app.config import CONFIG
@@ -30,9 +34,11 @@ if os.path.exists(static_dir):
 
 templates = Jinja2Templates(directory=templates_dir)
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {"message": "GomokuZero API", "version": "1.0.0"}
+    html_path = os.path.join(templates_dir, "index.html")
+    with open(html_path, 'r', encoding='utf-8') as f:
+        return f.read()
 
 @app.get("/health")
 async def health():

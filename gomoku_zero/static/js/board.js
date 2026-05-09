@@ -15,6 +15,11 @@ class BoardRenderer {
         this.lastMove = null;
         this.policyMap = null;
         this.stoneRadius = 0.4;
+        
+        // 初始化时就设置Canvas尺寸
+        setTimeout(() => {
+            this.resizeToContainer();
+        }, 100);
     }
     
     /**
@@ -26,14 +31,28 @@ class BoardRenderer {
         this.board = Array(size).fill().map(() => Array(size).fill(0));
         this.lastMove = null;
         this.policyMap = null;
+        this.resizeToContainer();
     }
     
     /**
      * 根据容器宽度调整Canvas尺寸
-     * @param {number} containerWidth - 容器宽度
      */
-    resize(containerWidth) {
-        const maxSize = Math.min(containerWidth, 600);
+    resizeToContainer() {
+        const container = document.querySelector('.board-container');
+        if (!container) return;
+        
+        // 优先使用容器宽度
+        let containerWidth = container.clientWidth;
+        
+        // 如果容器宽度太小，使用窗口宽度减去padding
+        if (containerWidth < 300) {
+            containerWidth = Math.min(window.innerWidth - 40, 600);
+        }
+        
+        // 确保最小宽度
+        const minWidth = Math.max(300, Math.min(containerWidth, 600));
+        
+        const maxSize = minWidth;
         this.cellSize = Math.floor(maxSize / this.size);
         const canvasSize = this.cellSize * this.size;
         
@@ -45,6 +64,14 @@ class BoardRenderer {
         this.ctx.scale(dpr, dpr);
         
         this.draw();
+    }
+    
+    /**
+     * 调整棋盘大小（兼容性方法）
+     * @param {number} containerWidth - 容器宽度（忽略，使用容器自适应）
+     */
+    resize(containerWidth) {
+        this.resizeToContainer();
     }
     
     /**
@@ -134,7 +161,7 @@ class BoardRenderer {
         const cs = this.cellSize;
         
         ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         
         for (let i = 0; i < this.size; i++) {
             ctx.beginPath();
@@ -148,12 +175,13 @@ class BoardRenderer {
             ctx.stroke();
         }
         
+        // 15x15棋盘的星位
         if (this.size === 15) {
             const starPoints = [[3, 3], [3, 7], [3, 11], [7, 3], [7, 7], [7, 11], [11, 3], [11, 7], [11, 11]];
             ctx.fillStyle = '#8B4513';
             for (const [row, col] of starPoints) {
                 ctx.beginPath();
-                ctx.arc(cs / 2 + col * cs, cs / 2 + row * cs, cs * 0.1, 0, Math.PI * 2);
+                ctx.arc(cs / 2 + col * cs, cs / 2 + row * cs, cs * 0.12, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -196,7 +224,7 @@ class BoardRenderer {
                     
                     if (this.lastMove && this.lastMove[0] === i && this.lastMove[1] === j) {
                         ctx.strokeStyle = '#f44336';
-                        ctx.lineWidth = 2;
+                        ctx.lineWidth = 3;
                         ctx.beginPath();
                         ctx.arc(cs / 2 + j * cs, cs / 2 + i * cs, cs * 0.35, 0, Math.PI * 2);
                         ctx.stroke();
