@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 import os
 import sys
 
@@ -27,18 +26,29 @@ app.include_router(data_api.router, prefix="/api/data", tags=["data"])
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 static_dir = os.path.join(BASE_DIR, "static")
-templates_dir = os.path.join(BASE_DIR, "templates")
+dist_dir = os.path.join(BASE_DIR, "dist")
 
-if os.path.exists(static_dir):
+if os.path.exists(dist_dir):
+    @app.get("/")
+    async def serve_frontend():
+        return FileResponse(os.path.join(dist_dir, "index.html"))
+
+    @app.get("/{path:path}")
+    async def serve_static(path: str):
+        file_path = os.path.join(dist_dir, path)
+        if os.path.exists(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(dist_dir, "index.html"))
+
+elif os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-templates = Jinja2Templates(directory=templates_dir)
-
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    html_path = os.path.join(templates_dir, "index.html")
-    with open(html_path, 'r', encoding='utf-8') as f:
-        return f.read()
+    @app.get("/")
+    async def root():
+        templates_dir = os.path.join(BASE_DIR, "templates")
+        html_path = os.path.join(templates_dir, "index.html")
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
 
 @app.get("/health")
 async def health():
