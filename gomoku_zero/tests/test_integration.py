@@ -75,7 +75,6 @@ def test_game_flow():
             break
         moves.append(best_move)
         board.place_stone(*best_move)
-        mcts.update_root(best_move)
     
     assert len(moves) > 0
     assert board.get_winner() in [1, -1, 0]

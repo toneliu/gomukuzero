@@ -53,14 +53,6 @@ class MCTS:
             self.board_size, self.board_size, 
             device=self.device, dtype=torch.float32
         )
-        self.policy_buffer = torch.zeros(
-            max_buffer_size, self.num_actions,
-            device=self.device, dtype=torch.float32
-        )
-        self.value_buffer = torch.zeros(
-            max_buffer_size,
-            device=self.device, dtype=torch.float32
-        )
         self.policy_workspace = torch.zeros(
             self.gpu_batch_size, self.num_actions,
             device=self.device, dtype=torch.float32
@@ -84,40 +76,43 @@ class MCTS:
         return self.root.get_value()
     
     def _gpu_batch_search(self, batch_size: int):
-        nodes_batch = []
-        states_batch = []
-        boards_batch = []
+        batch_states = []
+        batch_boards = []
+        batch_leaves = []
         
         for _ in range(batch_size):
-            node = self._select(self.root)
-            board = node.board_state if node.board_state else self.board
-            nodes_batch.append(node)
-            boards_batch.append(board)
-            states_batch.append(self._get_state(board))
+            leaf = self._select(self.root)
+            board = leaf.board_state if leaf.board_state else self.board
+            batch_leaves.append(leaf)
+            batch_boards.append(board)
+            batch_states.append(self._get_state(board))
         
-        for i, state in enumerate(states_batch):
+        for i, state in enumerate(batch_states):
             self.state_buffer[i] = state
         
         with torch.no_grad():
             policy_logits, values = self.network(self.state_buffer[:batch_size])
         
         policies = F.softmax(policy_logits, dim=1)
-        self.policy_workspace[:batch_size] = policies
         
-        for i, (node, board) in enumerate(zip(nodes_batch, boards_batch)):
-            value = values[i].cpu().item()
+        for i, (leaf, board, policy, value) in enumerate(zip(batch_leaves, batch_boards, policies, values)):
+            value_scalar = value.cpu().item()
             
             if board.is_game_over():
                 winner = board.get_winner()
-                value = float(winner) if winner else 0.0
+                value_scalar = float(winner) if winner else 0.0
             
-            self._expand_node(node, self.policy_workspace[i], value, board)
+            self._expand_node(leaf, policy, value_scalar, board)
         
-        for i, node in enumerate(nodes_batch):
-            self._backup(node, values[i].cpu().item())
+        for i, leaf in enumerate(batch_leaves):
+            value_scalar = values[i].cpu().item()
+            self._backup(leaf, value_scalar)
     
     def _select(self, node: Node) -> Node:
-        while node.is_expanded:
+        while True:
+            if not node.is_expanded:
+                return node
+            
             valid_moves = node.board_state.get_valid_moves() if node.board_state else self.board.get_valid_moves()
             
             if not valid_moves:
@@ -137,17 +132,21 @@ class MCTS:
                     best_ucb = ucb
                     best_move = move
             
-            if best_move is None:
+            if best_move is None or best_move not in node.children:
                 return node
+            
+            child = node.children[best_move]
+            child.visit_count += 1
             
             temp_board = node.board_state.copy()
             temp_board.place_stone(*best_move)
-            node = node.children[best_move]
-            node.board_state = temp_board
-        
-        return node
+            child.board_state = temp_board
+            node = child
     
     def _expand_node(self, node: Node, policy: torch.Tensor, value: float, board: Board):
+        if node.is_expanded:
+            return
+        
         valid_moves = board.get_valid_moves()
         move_indices = [r * board.size + c for r, c in valid_moves]
         

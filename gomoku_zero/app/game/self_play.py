@@ -23,8 +23,8 @@ class SelfPlay:
         while not board.is_game_over():
             mcts.search()
             
-            policy = mcts.get_policy(temperature=self.temperature)
-            states.append(board.get_state())
+            policy = mcts.get_policy_numpy(temperature=self.temperature)
+            states.append(board.get_state(CONFIG.HISTORY_LEN))
             policies.append(policy)
             
             best_move = mcts.get_best_move()
@@ -33,7 +33,6 @@ class SelfPlay:
             
             move_history.append(best_move)
             board.place_stone(*best_move)
-            mcts.update_root(best_move)
         
         winner = board.get_winner() if board.is_game_over() else 0
         

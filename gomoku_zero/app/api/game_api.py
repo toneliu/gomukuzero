@@ -190,7 +190,7 @@ async def get_game_state(game_id: str):
     
     ai_probs = None
     if game['mcts']:
-        ai_probs = game['mcts'].get_policy().tolist()
+        ai_probs = game['mcts'].get_policy_numpy().tolist()
     
     return GameStateResponse(
         game_id=game_id,

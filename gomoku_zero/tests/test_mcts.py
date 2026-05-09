@@ -31,7 +31,7 @@ def test_mcts_get_policy(simple_net):
     board = Board(size=9)
     mcts = MCTS(board, simple_net, simulations=10)
     mcts.search()
-    policy = mcts.get_policy(temperature=1.0)
+    policy = mcts.get_policy_numpy(temperature=1.0)
     assert policy.shape == (81,)
     assert np.isclose(policy.sum(), 1.0)
 

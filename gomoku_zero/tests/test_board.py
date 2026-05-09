@@ -54,10 +54,11 @@ def test_win_detection_diagonal():
     assert board.winner == 1
 
 def test_get_state():
+    from app.config import CONFIG
     board = Board(size=9)
     board.place_stone(4, 4)
-    state = board.get_state()
-    assert state.shape == (9, 9, 9)
+    state = board.get_state(CONFIG.HISTORY_LEN)
+    assert state.shape == (CONFIG.HISTORY_LEN * 2 + 1, 9, 9)
 
 def test_multiple_sizes():
     for size in [9, 11, 13, 15, 19]:
