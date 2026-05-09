@@ -180,18 +180,47 @@ async function updateGameState() {
 function handleGameOver(winner) {
     boardRenderer.clearPolicyMap();
     
-    let message;
+    const modal = document.getElementById('victory-modal');
+    const content = modal.querySelector('.victory-content');
+    const title = document.getElementById('victory-title');
+    const message = document.getElementById('victory-message');
+    
+    content.classList.remove('win', 'lose', 'draw');
+    
+    let resultTitle, resultMessage;
     if (winner === 0) {
-        message = '平局！';
+        resultTitle = '🤝 平局！';
+        resultMessage = '双方实力相当，这是一场精彩的对局！';
+        content.classList.add('draw');
     } else if ((winner === 1 && game.playerColor === 'black') || 
                (winner === -1 && game.playerColor === 'white')) {
-        message = '🎉 恭喜获胜！';
+        resultTitle = '🎉 恭喜获胜！';
+        resultMessage = '你击败了AI！太厉害了！';
+        content.classList.add('win');
     } else {
-        message = 'AI获胜，再接再厉！';
+        resultTitle = '🤖 AI获胜';
+        resultMessage = 'AI战胜了你，再接再厉！';
+        content.classList.add('lose');
     }
     
-    document.getElementById('status-message').textContent = message;
-    showNotification(message);
+    title.textContent = resultTitle;
+    message.textContent = resultMessage;
+    modal.classList.remove('hidden');
+    
+    document.getElementById('status-message').textContent = resultTitle;
+    
+    const closeBtn = document.getElementById('victory-close-btn');
+    closeBtn.onclick = () => {
+        modal.classList.add('hidden');
+    };
+    
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    };
+    
+    showNotification(resultTitle);
     
     loadGameHistory();
 }
