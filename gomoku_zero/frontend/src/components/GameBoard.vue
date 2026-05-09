@@ -59,16 +59,29 @@ const redraw = () => {
 }
 
 watch(
-  () => [props.board, props.boardSize, props.lastMove, props.policyMap],
-  () => {
-    redraw()
-  },
+  () => props.board,
+  () => redraw(),
+  { deep: true }
+)
+
+watch(
+  () => props.boardSize,
+  () => redraw()
+)
+
+watch(
+  () => props.lastMove,
+  () => redraw()
+)
+
+watch(
+  () => props.policyMap,
+  () => redraw(),
   { deep: true }
 )
 
 onMounted(() => {
   if (canvas.value) {
-    resize(canvas.value, props.boardSize)
     redraw()
 
     resizeObserver = new ResizeObserver(() => {
