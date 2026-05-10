@@ -28,6 +28,11 @@ export function useTraining() {
         // 忽略停止错误
       }
 
+      // 立即更新显示状态
+      isTraining.value = true
+      status.value = '训练中...'
+      progress.device = device.value.toUpperCase()
+
       const config = {
         device: device.value,
         board_size: boardSize.value,
@@ -42,17 +47,20 @@ export function useTraining() {
       console.log('训练响应:', data)
 
       if (data.success) {
-        isTraining.value = true
-        status.value = '训练中...'
+        // 确保显示后端返回的设备信息
+        if (data.device) {
+          progress.device = data.device.toUpperCase()
+        }
         startPolling()
       } else {
+        isTraining.value = false
         status.value = data.message || '训练启动失败'
       }
 
       return data
     } catch (error) {
       console.error('Start training error:', error)
-      // 尝试从错误响应中获取详细信息
+      isTraining.value = false
       if (error.response?.data?.detail) {
         status.value = error.response.data.detail
       } else {
@@ -74,6 +82,7 @@ export function useTraining() {
   }
 
   const startPolling = () => {
+    stopPolling()
     pollInterval = setInterval(async () => {
       try {
         const response = await trainingAPI.getTrainingStatus()
@@ -82,7 +91,7 @@ export function useTraining() {
         progress.iteration = data.iteration || 0
         progress.games = data.games_completed || 0
         progress.loss = data.loss || 0
-        progress.device = data.device?.toUpperCase() || 'CPU'
+        progress.device = (data.device || 'CPU').toUpperCase()
 
         if (!data.running) {
           isTraining.value = false
