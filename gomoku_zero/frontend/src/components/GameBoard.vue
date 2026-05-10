@@ -39,11 +39,9 @@ const canvas = ref(null)
 const { resize, drawBoard, getCellFromPoint } = useBoard()
 
 let resizeObserver = null
-let lastTapTime = 0
-let isTouch = false
 
 const handleClick = (event) => {
-  if (!canvas.value || isTouch) return
+  if (!canvas.value) return
   
   const cell = getCellFromPoint(event.clientX, event.clientY, props.boardSize, canvas.value)
   if (cell) {
@@ -52,7 +50,6 @@ const handleClick = (event) => {
 }
 
 const handleTouchStart = (event) => {
-  isTouch = true
   event.preventDefault()
 }
 
@@ -63,13 +60,6 @@ const handleTouchMove = (event) => {
 const handleTouchEnd = (event) => {
   if (!canvas.value) return
 
-  const now = Date.now()
-  if (now - lastTapTime < 300) {
-    isTouch = false
-    return
-  }
-  lastTapTime = now
-
   if (event.changedTouches && event.changedTouches.length > 0) {
     const touch = event.changedTouches[0]
     const cell = getCellFromPoint(touch.clientX, touch.clientY, props.boardSize, canvas.value)
@@ -77,10 +67,6 @@ const handleTouchEnd = (event) => {
       emit('click-cell', cell[0], cell[1])
     }
   }
-  
-  setTimeout(() => {
-    isTouch = false
-  }, 100)
 }
 
 const redraw = () => {
