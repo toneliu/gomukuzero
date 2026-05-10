@@ -7,7 +7,7 @@
 
     <TabNav
       :currentTab="currentTab"
-      @change-tab="currentTab = $event"
+      @change-tab="handleTabChange"
     />
 
     <main>
@@ -126,6 +126,13 @@ const {
 
 const showVictory = ref(false)
 const policyMap = ref([])
+
+const handleTabChange = (tab) => {
+  currentTab.value = tab
+  if (tab === 'training') {
+    checkTrainingStatus()
+  }
+}
 
 onMounted(() => {
   checkTrainingStatus()
