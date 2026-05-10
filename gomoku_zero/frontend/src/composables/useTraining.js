@@ -21,6 +21,13 @@ export function useTraining() {
 
   const startTraining = async () => {
     try {
+      // 先尝试停止已在运行的训练
+      try {
+        await trainingAPI.stopTraining()
+      } catch (stopError) {
+        // 忽略停止错误
+      }
+
       const config = {
         device: device.value,
         board_size: boardSize.value,
@@ -29,18 +36,28 @@ export function useTraining() {
         epochs: epochs.value
       }
 
+      console.log('开始训练，参数:', config)
       const response = await trainingAPI.startTraining(config)
       const data = response.data
+      console.log('训练响应:', data)
 
       if (data.success) {
         isTraining.value = true
         status.value = '训练中...'
         startPolling()
+      } else {
+        status.value = data.message || '训练启动失败'
       }
 
       return data
     } catch (error) {
       console.error('Start training error:', error)
+      // 尝试从错误响应中获取详细信息
+      if (error.response?.data?.detail) {
+        status.value = error.response.data.detail
+      } else {
+        status.value = '训练启动失败'
+      }
       return { success: false, error: error.message }
     }
   }

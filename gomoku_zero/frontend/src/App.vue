@@ -116,18 +116,12 @@ const {
   progress: trainingProgress,
   startTraining,
   stopTraining,
-  device: trainingDeviceFromHook,
-  boardSize: trainingBoardSizeFromHook,
-  gamesPerIteration: trainingGamesFromHook,
-  mctsSimulations: trainingMctsFromHook,
-  epochs: trainingEpochsFromHook
+  device: trainingDevice,
+  boardSize: trainingBoardSize,
+  gamesPerIteration: gamesPerIteration,
+  mctsSimulations: mctsSimulations,
+  epochs: trainingEpochs
 } = useTraining()
-
-const trainingDevice = trainingDeviceFromHook
-const trainingBoardSize = trainingBoardSizeFromHook
-const gamesPerIteration = trainingGamesFromHook
-const mctsSimulations = trainingMctsFromHook
-const trainingEpochs = trainingEpochsFromHook
 
 const showVictory = ref(false)
 const policyMap = ref([])
