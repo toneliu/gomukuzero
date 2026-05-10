@@ -17,28 +17,43 @@ export function useBoard() {
   }
 
   const resize = (canvas, size) => {
-    if (!canvas) return
+    if (!canvas) return false
 
     const container = canvas.parentElement
-    const clientWidth = container?.clientWidth || window.innerWidth
-    const clientHeight = container?.clientHeight || window.innerHeight
-    
-    const viewportWidth = Math.min(clientWidth, 700)
-    const viewportHeight = Math.min(clientHeight, 600)
-    
-    const maxSize = Math.min(viewportWidth - 16, viewportHeight - 16, 700, viewportWidth * 0.95)
+    if (!container) return false
 
-    if (maxSize <= 0 || maxSize < size * 20) {
-      setTimeout(() => resize(canvas, size), 100)
-      return
+    const containerRect = container.getBoundingClientRect()
+    let containerWidth = containerRect.width
+    let containerHeight = containerRect.height
+
+    if (containerWidth <= 0 || containerHeight <= 0) {
+      setTimeout(() => {
+        if (canvas) {
+          resize(canvas, size)
+        }
+      }, 100)
+      return false
     }
 
-    canvas.width = maxSize
-    canvas.height = maxSize
-    canvas.style.width = maxSize + 'px'
-    canvas.style.height = maxSize + 'px'
+    const maxSize = Math.min(containerWidth - 8, containerHeight - 8, 700)
+    
+    if (maxSize < size * 15) {
+      const minSize = size * 15
+      const adjustedSize = Math.min(minSize, containerWidth - 8, containerHeight - 8, 700)
+      
+      canvas.width = adjustedSize
+      canvas.height = adjustedSize
+      canvas.style.width = adjustedSize + 'px'
+      canvas.style.height = adjustedSize + 'px'
+    } else {
+      canvas.width = maxSize
+      canvas.height = maxSize
+      canvas.style.width = maxSize + 'px'
+      canvas.style.height = maxSize + 'px'
+    }
 
-    cellSize.value = maxSize / (size + 1)
+    cellSize.value = canvas.width / (size + 1)
+    return true
   }
 
   const drawBoard = (canvas, size, boardData, lastMoveData, policyData) => {
@@ -68,7 +83,7 @@ export function useBoard() {
     if (boardData && boardData.length > 0) {
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
-          if (boardData[r][c] !== 0) {
+          if (boardData[r] && boardData[r][c] !== 0) {
             drawStone(ctx, cs, r, c, boardData[r][c])
           }
         }

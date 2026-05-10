@@ -39,6 +39,20 @@ const canvas = ref(null)
 const { resize, drawBoard, getCellFromPoint } = useBoard()
 
 let resizeObserver = null
+let isResizing = false
+
+const redraw = () => {
+  if (!canvas.value) return
+  
+  resize(canvas.value, props.boardSize)
+  drawBoard(
+    canvas.value,
+    props.boardSize,
+    props.board,
+    props.lastMove,
+    props.policyMap
+  )
+}
 
 const handleClick = (event) => {
   if (!canvas.value) return
@@ -69,54 +83,54 @@ const handleTouchEnd = (event) => {
   }
 }
 
-const redraw = () => {
-  if (!canvas.value) return
-  
-  nextTick(() => {
-    resize(canvas.value, props.boardSize)
-    drawBoard(
-      canvas.value,
-      props.boardSize,
-      props.board,
-      props.lastMove,
-      props.policyMap
-    )
-  })
-}
-
 watch(
   () => props.board,
-  () => redraw(),
-  { deep: true, immediate: true }
+  () => {
+    nextTick(() => redraw())
+  },
+  { deep: true }
 )
 
 watch(
   () => props.boardSize,
-  () => {
-    setTimeout(() => redraw(), 100)
+  (newSize, oldSize) => {
+    if (newSize !== oldSize) {
+      nextTick(() => {
+        setTimeout(() => redraw(), 50)
+      })
+    }
   }
 )
 
 watch(
   () => props.lastMove,
-  () => redraw()
+  () => {
+    nextTick(() => redraw())
+  }
 )
 
 watch(
   () => props.policyMap,
-  () => redraw(),
+  () => {
+    nextTick(() => redraw())
+  },
   { deep: true }
 )
 
 onMounted(() => {
   if (canvas.value) {
-    setTimeout(() => redraw(), 300)
+    nextTick(() => {
+      setTimeout(() => redraw(), 100)
+    })
 
     resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect.width > 0) {
-          redraw()
-          break
+      if (entries.length > 0 && entries[0].contentRect.width > 0) {
+        if (!isResizing) {
+          isResizing = true
+          setTimeout(() => {
+            redraw()
+            isResizing = false
+          }, 50)
         }
       }
     })
