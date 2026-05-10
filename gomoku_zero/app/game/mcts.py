@@ -31,7 +31,7 @@ class Node:
 
 
 class MCTS:
-    def __init__(self, board: Board, network, simulations: int = None):
+    def __init__(self, board: Board, network, simulations: int = None, device: torch.device = None):
         self.board = board
         self.network = network
         self.simulations = simulations or CONFIG.MCTS_SIMULATIONS
@@ -39,7 +39,9 @@ class MCTS:
         self.root = Node(prior=1.0, parent=None, move=None)
         self.root.board_state = board.copy()
         
-        self.device = next(network.parameters()).device
+        if device is None:
+            device = next(network.parameters()).device
+        self.device = device
         self.board_size = board.size
         self.num_actions = board.size * board.size
         

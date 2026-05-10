@@ -10,7 +10,9 @@ import torch
 import threading
 import json
 from datetime import datetime
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 model_manager = ModelManager()
@@ -72,6 +74,8 @@ async def get_devices():
 async def start_training(request: StartTrainingRequest):
     global training_state
     
+    logger.info(f"Received training request: board_size={request.board_size}, device={request.device}")
+    
     if training_state['running']:
         raise HTTPException(status_code=400, detail="训练已在进行中")
     
@@ -91,12 +95,14 @@ async def start_training(request: StartTrainingRequest):
     training_state['games_completed'] = 0
     
     def training_loop():
+        logger.info(f"Training loop starting with device: {request.device}")
         device = torch.device(request.device)
         network = model_manager.load_model(request.board_size)
         if network is None:
             network = model_manager.create_new_model(request.board_size)
         
         network = network.to(device)
+        logger.info(f"Network moved to device: {next(network.parameters()).device}")
         
         trainer = Trainer(network, request.board_size)
         buffer = DataBuffer(board_size=request.board_size)
@@ -111,7 +117,7 @@ async def start_training(request: StartTrainingRequest):
             training_state['iteration'] = iteration
             
             sp = SelfPlay(network, board_size=request.board_size, 
-                        simulations=request.mcts_simulations)
+                        simulations=request.mcts_simulations, device=device)
             
             games_batch = sp.play_games(request.games_per_iteration)
             for game in games_batch:

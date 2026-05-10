@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from typing import Dict, List
 from .board import Board
 from .mcts import MCTS
@@ -6,15 +7,19 @@ from app.config import CONFIG
 import uuid
 
 class SelfPlay:
-    def __init__(self, network, board_size: int = 9, simulations: int = None):
+    def __init__(self, network, board_size: int = 9, simulations: int = None, device: torch.device = None):
         self.network = network
         self.board_size = board_size
         self.simulations = simulations or CONFIG.MCTS_SIMULATIONS
         self.temperature = CONFIG.TEMPERATURE
+        
+        if device is None:
+            device = next(network.parameters()).device
+        self.device = device
     
     def play_game(self) -> Dict:
         board = Board(size=self.board_size)
-        mcts = MCTS(board, self.network, self.simulations)
+        mcts = MCTS(board, self.network, self.simulations, device=self.device)
         
         states = []
         policies = []
