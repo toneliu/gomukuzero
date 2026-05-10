@@ -20,13 +20,23 @@ export function useBoard() {
     if (!canvas) return
 
     const container = canvas.parentElement
-    const containerWidth = Math.min(container.clientWidth || window.innerWidth, 700)
-    const containerHeight = container.clientHeight || window.innerWidth
+    const clientWidth = container?.clientWidth || window.innerWidth
+    const clientHeight = container?.clientHeight || window.innerHeight
+    
+    const viewportWidth = Math.min(clientWidth, 700)
+    const viewportHeight = Math.min(clientHeight, 600)
+    
+    const maxSize = Math.min(viewportWidth - 16, viewportHeight - 16, 700, viewportWidth * 0.95)
 
-    const maxSize = Math.min(containerWidth - 16, containerHeight - 16, 700)
+    if (maxSize <= 0 || maxSize < size * 20) {
+      setTimeout(() => resize(canvas, size), 100)
+      return
+    }
 
     canvas.width = maxSize
     canvas.height = maxSize
+    canvas.style.width = maxSize + 'px'
+    canvas.style.height = maxSize + 'px'
 
     cellSize.value = maxSize / (size + 1)
   }

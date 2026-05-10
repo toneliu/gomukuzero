@@ -4,6 +4,7 @@
       ref="canvas"
       @click="handleClick"
       @touchstart.prevent="handleTouchStart"
+      @touchmove.prevent="handleTouchMove"
       @touchend.prevent="handleTouchEnd"
     ></canvas>
   </div>
@@ -39,9 +40,11 @@ const { resize, drawBoard, getCellFromPoint } = useBoard()
 
 let resizeObserver = null
 let lastTapTime = 0
+let isTouch = false
 
 const handleClick = (event) => {
-  if (!canvas.value) return
+  if (!canvas.value || isTouch) return
+  
   const cell = getCellFromPoint(event.clientX, event.clientY, props.boardSize, canvas.value)
   if (cell) {
     emit('click-cell', cell[0], cell[1])
@@ -49,16 +52,22 @@ const handleClick = (event) => {
 }
 
 const handleTouchStart = (event) => {
-  if (event.touches.length > 0) {
-    event.preventDefault()
-  }
+  isTouch = true
+  event.preventDefault()
+}
+
+const handleTouchMove = (event) => {
+  event.preventDefault()
 }
 
 const handleTouchEnd = (event) => {
   if (!canvas.value) return
 
   const now = Date.now()
-  if (now - lastTapTime < 300) return
+  if (now - lastTapTime < 300) {
+    isTouch = false
+    return
+  }
   lastTapTime = now
 
   if (event.changedTouches && event.changedTouches.length > 0) {
@@ -68,30 +77,37 @@ const handleTouchEnd = (event) => {
       emit('click-cell', cell[0], cell[1])
     }
   }
+  
+  setTimeout(() => {
+    isTouch = false
+  }, 100)
 }
 
 const redraw = () => {
   if (!canvas.value) return
-  resize(canvas.value, props.boardSize)
-  drawBoard(
-    canvas.value,
-    props.boardSize,
-    props.board,
-    props.lastMove,
-    props.policyMap
-  )
+  
+  nextTick(() => {
+    resize(canvas.value, props.boardSize)
+    drawBoard(
+      canvas.value,
+      props.boardSize,
+      props.board,
+      props.lastMove,
+      props.policyMap
+    )
+  })
 }
 
 watch(
   () => props.board,
   () => redraw(),
-  { deep: true }
+  { deep: true, immediate: true }
 )
 
 watch(
   () => props.boardSize,
   () => {
-    nextTick(() => redraw())
+    setTimeout(() => redraw(), 100)
   }
 )
 
@@ -108,10 +124,15 @@ watch(
 
 onMounted(() => {
   if (canvas.value) {
-    nextTick(() => redraw())
+    setTimeout(() => redraw(), 300)
 
-    resizeObserver = new ResizeObserver(() => {
-      redraw()
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          redraw()
+          break
+        }
+      }
     })
     resizeObserver.observe(canvas.value.parentElement)
   }
