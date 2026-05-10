@@ -3,9 +3,11 @@
     <div class="training-controls">
       <div class="control-group">
         <label for="train-device">训练设备:</label>
-        <select id="train-device" v-model="device">
+        <select id="train-device" v-model="device" :disabled="isTraining">
           <option value="cpu">CPU (通用)</option>
-          <option value="cuda">GPU (需要CUDA)</option>
+          <option value="cuda" :disabled="!cudaAvailable">GPU (需要CUDA) 
+            <span v-if="!cudaAvailable">(不可用)</span>
+          </option>
         </select>
       </div>
 
@@ -99,6 +101,9 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+import { trainingAPI } from '../api/training'
+
 defineProps({
   isTraining: {
     type: Boolean,
@@ -121,6 +126,24 @@ const boardSize = defineModel('boardSize', { default: 9 })
 const gamesPerIteration = defineModel('gamesPerIteration', { default: 100 })
 const mctsSimulations = defineModel('mctsSimulations', { default: 200 })
 const epochs = defineModel('epochs', { default: 10 })
+
+const cudaAvailable = ref(false)
+
+const loadDeviceInfo = async () => {
+  try {
+    const response = await trainingAPI.getDevices()
+    cudaAvailable.value = response.data.cuda_available
+    if (!cudaAvailable.value && device.value === 'cuda') {
+      device.value = 'cpu'
+    }
+  } catch (error) {
+    console.error('Load device info error:', error)
+  }
+}
+
+onMounted(() => {
+  loadDeviceInfo()
+})
 </script>
 
 <style scoped>
