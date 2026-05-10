@@ -16,6 +16,8 @@ export function useBoard() {
     lastMoveMarker: '#FF5722'
   }
 
+  const MIN_CELL_SIZE = 20
+
   const resize = (canvas, size) => {
     if (!canvas) return false
 
@@ -37,22 +39,15 @@ export function useBoard() {
 
     const maxSize = Math.min(containerWidth - 8, containerHeight - 8, 700)
     
-    if (maxSize < size * 15) {
-      const minSize = size * 15
-      const adjustedSize = Math.min(minSize, containerWidth - 8, containerHeight - 8, 700)
-      
-      canvas.width = adjustedSize
-      canvas.height = adjustedSize
-      canvas.style.width = adjustedSize + 'px'
-      canvas.style.height = adjustedSize + 'px'
-    } else {
-      canvas.width = maxSize
-      canvas.height = maxSize
-      canvas.style.width = maxSize + 'px'
-      canvas.style.height = maxSize + 'px'
-    }
+    const minCanvasSize = size * MIN_CELL_SIZE
+    let canvasSize = Math.max(maxSize, minCanvasSize)
 
-    cellSize.value = canvas.width / (size + 1)
+    canvas.width = canvasSize
+    canvas.height = canvasSize
+    canvas.style.width = canvasSize + 'px'
+    canvas.style.height = canvasSize + 'px'
+
+    cellSize.value = canvasSize / (size + 1)
     return true
   }
 

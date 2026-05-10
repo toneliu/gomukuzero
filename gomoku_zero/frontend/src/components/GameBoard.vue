@@ -39,11 +39,9 @@ const canvas = ref(null)
 const { resize, drawBoard, getCellFromPoint } = useBoard()
 
 let resizeObserver = null
-let isResizing = false
 
 const redraw = () => {
   if (!canvas.value) return
-  
   resize(canvas.value, props.boardSize)
   drawBoard(
     canvas.value,
@@ -93,12 +91,10 @@ watch(
 
 watch(
   () => props.boardSize,
-  (newSize, oldSize) => {
-    if (newSize !== oldSize) {
-      nextTick(() => {
-        setTimeout(() => redraw(), 50)
-      })
-    }
+  () => {
+    nextTick(() => {
+      nextTick(() => redraw())
+    })
   }
 )
 
@@ -120,18 +116,14 @@ watch(
 onMounted(() => {
   if (canvas.value) {
     nextTick(() => {
-      setTimeout(() => redraw(), 100)
+      nextTick(() => {
+        redraw()
+      })
     })
 
     resizeObserver = new ResizeObserver((entries) => {
       if (entries.length > 0 && entries[0].contentRect.width > 0) {
-        if (!isResizing) {
-          isResizing = true
-          setTimeout(() => {
-            redraw()
-            isResizing = false
-          }, 50)
-        }
+        redraw()
       }
     })
     resizeObserver.observe(canvas.value.parentElement)
