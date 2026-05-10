@@ -19,16 +19,33 @@ export function useTraining() {
   const status = ref('空闲')
   let pollInterval = null
 
+  const checkTrainingStatus = async () => {
+    try {
+      const response = await trainingAPI.getTrainingStatus()
+      const data = response.data
+
+      if (data.running) {
+        isTraining.value = true
+        status.value = '训练中...'
+        progress.iteration = data.iteration || 0
+        progress.games = data.games_completed || 0
+        progress.loss = data.loss || 0
+        progress.device = (data.device || 'CPU').toUpperCase()
+        startPolling()
+      }
+    } catch (error) {
+      console.error('Check training status error:', error)
+    }
+  }
+
   const startTraining = async () => {
     try {
-      // 先尝试停止已在运行的训练
       try {
         await trainingAPI.stopTraining()
       } catch (stopError) {
         // 忽略停止错误
       }
 
-      // 立即更新显示状态
       isTraining.value = true
       status.value = '训练中...'
       progress.device = device.value.toUpperCase()
@@ -47,7 +64,6 @@ export function useTraining() {
       console.log('训练响应:', data)
 
       if (data.success) {
-        // 确保显示后端返回的设备信息
         if (data.device) {
           progress.device = data.device.toUpperCase()
         }
@@ -121,6 +137,7 @@ export function useTraining() {
     progress,
     status,
     startTraining,
-    stopTraining
+    stopTraining,
+    checkTrainingStatus
   }
 }

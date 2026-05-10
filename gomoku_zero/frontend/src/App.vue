@@ -77,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import TabNav from './components/TabNav.vue'
 import GameBoard from './components/GameBoard.vue'
 import GameControls from './components/GameControls.vue'
@@ -120,11 +120,16 @@ const {
   boardSize: trainingBoardSize,
   gamesPerIteration: gamesPerIteration,
   mctsSimulations: mctsSimulations,
-  epochs: trainingEpochs
+  epochs: trainingEpochs,
+  checkTrainingStatus
 } = useTraining()
 
 const showVictory = ref(false)
 const policyMap = ref([])
+
+onMounted(() => {
+  checkTrainingStatus()
+})
 
 const statusMessage = computed(() => {
   if (!gameId.value) {
