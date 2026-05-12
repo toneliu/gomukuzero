@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from app.models.model_manager import ModelManager
@@ -9,6 +10,7 @@ from app.config import CONFIG
 import torch
 import threading
 import json
+import asyncio
 from datetime import datetime
 import logging
 import time
@@ -20,6 +22,9 @@ router = APIRouter()
 model_manager = ModelManager()
 
 STATE_FILE = Path("training_state.json")
+
+sse_clients = []
+sse_lock = threading.Lock()
 
 def load_training_state():
     """从文件加载训练状态"""
@@ -95,6 +100,19 @@ class DeviceInfoResponse(BaseModel):
     device_count: int
     device_name: str = ""
 
+def broadcast_training_update(data: dict):
+    """向所有SSE客户端广播训练更新"""
+    message = f"data: {json.dumps(data)}\n\n"
+    with sse_lock:
+        disconnected = []
+        for client_queue in sse_clients:
+            try:
+                client_queue.put_nowait(message)
+            except:
+                disconnected.append(client_queue)
+        for client_queue in disconnected:
+            sse_clients.remove(client_queue)
+
 @router.get("/devices", response_model=DeviceInfoResponse)
 async def get_devices():
     cuda_available = torch.cuda.is_available()
@@ -109,6 +127,36 @@ async def get_devices():
         current_device='cuda' if cuda_available else 'cpu',
         device_count=device_count,
         device_name=device_name
+    )
+
+@router.get("/stream")
+async def stream_training_updates():
+    """SSE端点，实时推送训练状态更新"""
+    client_queue = asyncio.Queue()
+    with sse_lock:
+        sse_clients.append(client_queue)
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    message = await asyncio.wait_for(client_queue.get(), timeout=30)
+                    yield message
+                except asyncio.TimeoutError:
+                    yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
+        except GeneratorExit:
+            with sse_lock:
+                if client_queue in sse_clients:
+                    sse_clients.remove(client_queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
     )
 
 @router.post("/start")
@@ -143,6 +191,12 @@ async def start_training(request: StartTrainingRequest):
         'iteration': 0,
         'games_completed': 0,
         'loss': 0.0
+    })
+
+    broadcast_training_update({
+        'type': 'training_started',
+        'board_size': request.board_size,
+        'device': request.device
     })
 
     def training_loop():
@@ -197,23 +251,33 @@ async def start_training(request: StartTrainingRequest):
             if iteration % 10 == 0:
                 model_manager.save_model(network, request.board_size, "best")
 
-            save_training_state({
+            current_state = {
                 'running': True,
                 'board_size': request.board_size,
                 'device': request.device,
                 'iteration': iteration,
                 'games_completed': games_completed,
                 'loss': training_state['loss']
+            }
+            save_training_state(current_state)
+            broadcast_training_update({
+                'type': 'iteration_complete',
+                **current_state
             })
 
         training_state['running'] = False
-        save_training_state({
+        final_state = {
             'running': False,
             'board_size': request.board_size,
             'device': request.device,
             'iteration': iteration,
             'games_completed': games_completed,
             'loss': training_state['loss']
+        }
+        save_training_state(final_state)
+        broadcast_training_update({
+            'type': 'training_stopped',
+            **final_state
         })
         logger.info("Training loop finished")
 
@@ -254,13 +318,18 @@ async def stop_training():
     global training_state
     training_state['running'] = False
 
-    save_training_state({
+    current_state = {
         'running': False,
         'board_size': training_state['board_size'],
         'device': training_state['device'],
         'iteration': training_state['iteration'],
         'games_completed': training_state['games_completed'],
         'loss': training_state['loss']
+    }
+    save_training_state(current_state)
+    broadcast_training_update({
+        'type': 'training_stopped',
+        **current_state
     })
 
     if training_state['thread']:
