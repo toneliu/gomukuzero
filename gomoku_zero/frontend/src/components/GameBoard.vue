@@ -142,14 +142,17 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   max-width: 700px;
-  aspect-ratio: 1 / 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   margin: 0 auto;
+  padding-bottom: 100%;
+  height: 0;
 }
 
-canvas {
+.board-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: #DEB887;
   border: 4px solid #8B4513;
   border-radius: 4px;
@@ -159,8 +162,6 @@ canvas {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-  width: 100%;
-  height: 100%;
 }
 
 @media (max-width: 768px) {

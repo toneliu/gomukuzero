@@ -19,31 +19,19 @@ export function useBoard() {
   const resize = (canvas, size) => {
     if (!canvas) return false
 
-    const container = canvas.parentElement
-    if (!container) return false
+    const displayWidth = canvas.clientWidth
+    const displayHeight = canvas.clientHeight
 
-    const containerRect = container.getBoundingClientRect()
-    let containerWidth = containerRect.width
-    let containerHeight = containerRect.height
-
-    if (containerWidth <= 0 || containerHeight <= 0) {
-      setTimeout(() => {
-        if (canvas) {
-          resize(canvas, size)
-        }
-      }, 100)
+    if (displayWidth <= 0 || displayHeight <= 0) {
+      setTimeout(() => resize(canvas, size), 50)
       return false
     }
 
-    const maxSize = Math.min(containerWidth - 8, containerHeight - 8, 700)
-    const canvasSize = Math.max(maxSize, size * 20)
+    const dpr = window.devicePixelRatio || 1
+    const canvasSize = Math.max(displayWidth, displayHeight) * dpr
 
     canvas.width = canvasSize
     canvas.height = canvasSize
-    canvas.style.width = '100%'
-    canvas.style.maxWidth = canvasSize + 'px'
-    canvas.style.height = 'auto'
-    canvas.style.aspectRatio = '1 / 1'
 
     cellSize.value = canvasSize / (size + 1)
     return true
