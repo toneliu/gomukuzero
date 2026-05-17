@@ -16,8 +16,6 @@ export function useBoard() {
     lastMoveMarker: '#FF5722'
   }
 
-  const MIN_CELL_SIZE = 20
-
   const resize = (canvas, size) => {
     if (!canvas) return false
 
@@ -38,14 +36,14 @@ export function useBoard() {
     }
 
     const maxSize = Math.min(containerWidth - 8, containerHeight - 8, 700)
-    
-    const minCanvasSize = size * MIN_CELL_SIZE
-    let canvasSize = Math.max(maxSize, minCanvasSize)
+    const canvasSize = Math.max(maxSize, size * 20)
 
     canvas.width = canvasSize
     canvas.height = canvasSize
-    canvas.style.width = canvasSize + 'px'
-    canvas.style.height = canvasSize + 'px'
+    canvas.style.width = '100%'
+    canvas.style.maxWidth = canvasSize + 'px'
+    canvas.style.height = 'auto'
+    canvas.style.aspectRatio = '1 / 1'
 
     cellSize.value = canvasSize / (size + 1)
     return true

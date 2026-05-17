@@ -142,10 +142,11 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   max-width: 700px;
-  min-height: 350px;
+  aspect-ratio: 1 / 1;
   display: flex;
   justify-content: center;
   align-items: center;
+  margin: 0 auto;
 }
 
 canvas {
@@ -158,11 +159,13 @@ canvas {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
+  width: 100%;
+  height: 100%;
 }
 
 @media (max-width: 768px) {
   .board-container {
-    min-height: 300px;
+    max-width: 95vw;
   }
 }
 </style>
